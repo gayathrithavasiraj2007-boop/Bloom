@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bloom — Gesture Garden</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600&display=swap');
+
+:root {
+  --bg: #f5f1e8;
+  --ink: #292b23;
+  --muted: #77796e;
+  --line: rgba(50,50,35,.12);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.app {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Compact header */
+.topbar {
+  height: 54px;
+  flex-shrink: 0;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e7dfc8;
+  color: #65643f;
+  font-size: 20px;
+}
+
+.brand-name {
+  font: 600 21px 'Playfair Display', serif;
+}
+
+.brand-sub {
+  font-size: 8px;
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.top-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b7a878;
+}
+
+.status-dot.active {
+  background: #5d9b70;
+}
+
+/* Main content uses nearly all available height */
+.workspace {
+  flex: 1;
+  min-height: 0;
+  padding: 7px 12px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace-heading {
+  min-height: 45px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px 7px;
+}
+
+.heading-title {
+  font: 500 22px 'Playfair Display', serif;
+}
+
+.heading-sub {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.gesture-hint {
+  display: flex;
+  gap: 14px;
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.hint-icon {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e9e3d3;
+  font-size: 15px;
+}
+
+/* Large camera stage */
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  background: #d9dfdf;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(50,45,30,.05);
+}
+
+#video, #canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#video {
+  z-index: 0;
+}
+
+#canvas {
+  z-index: 1;
+  pointer-events: none;
+}
+
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 25px;
+  background: linear-gradient(135deg,#e5e7df,#d8dfdc);
+}
+
+.camera-placeholder.hidden {
+  display: none;
+}
+
+.placeholder-icon {
+  width: 62px;
+  height: 62px;
+  border: 1px solid rgba(50,50,35,.15);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 27px;
+  color: #6b705e;
+}
+
+.placeholder-title {
+  font: 500 25px 'Playfair Display', serif;
+}
+
+.placeholder-sub {
+  max-width: 330px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.live-badge {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 30px;
+  background: rgba(25,28,26,.72);
+  color: white;
+  font-size: 10px;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
+
+.live-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a5d5a5;
+}
+
+.gesture-status {
+  position: absolute;
+  z-index: 3;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90%;
+  padding: 10px 17px;
+  border-radius: 30px;
+  background: rgba(25,28,26,.76);
+  color: white;
+  font-size: 11px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+/* Controls overlay on the camera */
+.camera-controls {
+  position: absolute;
+  z-index: 4;
+  right: 14px;
+  top: 13px;
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  font: 600 11px 'DM Sans', sans-serif;
+  padding: 10px 16px;
+  border-radius: 30px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #292b23;
+  color: #fffdf7;
+}
+
+.btn-secondary {
+  background: rgba(255,255,255,.88);
+  border-color: rgba(50,50,35,.15);
+  color: #55574d;
+}
+
+/* Small bottom strip */
+.bottom-bar {
+  flex-shrink: 0;
+  min-height: 34px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px 0;
+}
+
+.control-note {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.footer {
+  display: none;
+}
+
+/* Large desktop screens */
+@media (min-width: 1200px) {
+  .topbar {
+    height: 52px;
+  }
+
+  .workspace {
+    padding: 6px 12px 8px;
+  }
+
+  .workspace-heading {
+    min-height: 43px;
+  }
+
+  .stage {
+    border-radius: 14px;
+  }
+
+  .bottom-bar {
+    min-height: 28px;
+  }
+}
+
+/* Mobile screens */
+@media (max-width: 700px) {
+  .topbar {
+    height: 49px;
+    padding: 0 10px;
+  }
+
+  .brand-name {
+    font-size: 19px;
+  }
+
+  .brand-sub {
+    font-size: 7px;
+  }
+
+  .top-status {
+    font-size: 9px;
+  }
+
+  .workspace {
+    padding: 5px 6px 6px;
+  }
+
+  .workspace-heading {
+    min-height: 54px;
+    padding: 0 3px 6px;
+    align-items: center;
+  }
+
+  .heading-title {
+    font-size: 18px;
+  }
+
+  .heading-sub {
+    font-size: 9px;
+  }
+
+  .gesture-hint {
+    gap: 7px;
+  }
+
+  .hint {
+    gap: 4px;
+    font-size: 8px;
+  }
+
+  .hint-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 12px;
+  }
+
+  .stage {
+    border-radius: 9px;
+  }
+
+  .camera-controls {
+    top: 8px;
+    right: 8px;
+    gap: 5px;
+  }
+
+  button {
+    padding: 8px 11px;
+    font-size: 9px;
+  }
+
+  .live-badge {
+    top: 8px;
+    left: 8px;
+    padding: 7px 9px;
+    font-size: 8px;
+  }
+
+  .gesture-status {
+    bottom: 9px;
+    padding: 9px 12px;
+    font-size: 9px;
+  }
+
+  .bottom-bar {
+    min-height: 29px;
+    padding-top: 5px;
+  }
+
+  .control-note {
+    font-size: 8px;
+  }
+
+  .placeholder-title {
+    font-size: 21px;
+  }
+
+  .placeholder-sub {
+    font-size: 10px;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">✿</div>
+      <div>
+        <div class="brand-name">Bloom</div>
+        <div class="brand-sub">Gesture Garden</div>
+      </div>
+    </div>
+
+    <div class="top-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="connectionStatus">Camera offline</span>
+    </div>
+  </header>
+
+  <main class="workspace">
+
+    <div class="workspace-heading">
+      <div>
+        <div class="heading-title">Create with your hands.</div>
+        <div class="heading-sub">Draw in the air. Let the flowers follow.</div>
+      </div>
+
+      <div class="gesture-hint">
+        <div class="hint">
+          <span class="hint-icon">☝</span>
+          <span>Point to plant</span>
+        </div>
+        <div class="hint">
+          <span class="hint-icon">✋</span>
+          <span>Open to scatter</span>
+        </div>
+      </div>
+    </div>
+
+    <section class="stage">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+
+      <div class="camera-placeholder" id="placeholder">
+        <div class="placeholder-icon">✿</div>
+        <div class="placeholder-title">Your garden awaits.</div>
+        <div class="placeholder-sub">
+          Start your camera, point your index finger,
+          and watch your gestures bloom into flowers.
+        </div>
+      </div>
+
+      <div class="live-badge">
+        <span class="live-indicator"></span>
+        <span id="liveLabel">Camera offline</span>
+      </div>
+
+      <div class="camera-controls">
+        <button class="btn-secondary" id="clearBtn">Clear</button>
+        <button class="btn-primary" id="startBtn">Camera on</button>
+        <button class="btn-secondary" id="stopBtn" disabled>Stop</button>
+      </div>
+
+      <div class="gesture-status" id="gestureStatus">
+        Start your camera to begin
+      </div>
+    </section>
+
+    <div class="bottom-bar">
+      <div class="control-note">
+        Point and move to draw · Open your palm to scatter
+      </div>
+      <div class="control-note">BLOOM · INTERACTIVE GESTURE ART</div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<script>
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const startBtn = document.getElementById("startBtn");
+const stopBtn = document.getElementById("stopBtn");
+const clearBtn = document.getElementById("clearBtn");
+
+const placeholder = document.getElementById("placeholder");
+const gestureStatus = document.getElementById("gestureStatus");
+const connectionStatus = document.getElementById("connectionStatus");
+const statusDot = document.getElementById("statusDot");
+const liveLabel = document.getElementById("liveLabel");
+
+let camera = null;
+let hands = null;
+let running = false;
+let starting = false;
+let animationId = null;
+
+let flowers = [];
+let previousPoints = {};
+let previousGestures = {};
+let handMeshes = [];
+
+const MAX_FLOWERS = 1000;
+const FLOWER_SPACING = 12;
+
+const flowerColors = [
+  "#E88F9B", "#E6B75F", "#B4A0D8",
+  "#F1D7A0", "#D58BAE", "#8DBBCB",
+  "#F0B9A5", "#C6D39B", "#D99A78",
+  "#E8D9EF", "#F5E6D0", "#C8A1C8"
+];
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function isFingerExtended(lm, tip, pip) {
+  return distance(lm[tip], lm[0]) >
+         distance(lm[pip], lm[0]) * 1.12;
+}
+
+function detectGesture(lm) {
+  const index = isFingerExtended(lm, 8, 6);
+  const middle = isFingerExtended(lm, 12, 10);
+  const ring = isFingerExtended(lm, 16, 14);
+  const pinky = isFingerExtended(lm, 20, 18);
+
+  if (index && !middle && !ring && !pinky) return "point";
+  if (index && middle && ring && pinky) return "open";
+  if (index && middle && !ring && !pinky) return "peace";
+
+  return "idle";
+}
+
+function plantFlower(x, y) {
+  flowers.push({
+    x, y,
+    size: 12 + Math.random() * 11,
+    petals: 9 + Math.floor(Math.random() * 5),
+    color: flowerColors[Math.floor(Math.random() * flowerColors.length)],
+    centerColor: Math.random() > .5 ? "#D7A33F" : "#8B7542",
+    rotation: Math.random() * Math.PI * 2,
+    scattered: false,
+    vx: 0,
+    vy: 0,
+    spin: 0
+  });
+
+  if (flowers.length > MAX_FLOWERS) {
+    flowers.splice(0, flowers.length - MAX_FLOWERS);
+  }
+}
+
+function drawFlower(flower) {
+  const size = flower.size;
+  const petals = flower.petals;
+
+  ctx.save();
+  ctx.translate(flower.x, flower.y);
+  ctx.rotate(flower.rotation);
+
+  ctx.shadowColor = "rgba(45,35,25,.20)";
+  ctx.shadowBlur = size * .28;
+  ctx.shadowOffsetY = size * .10;
+
+  for (let layer = 0; layer < 2; layer++) {
+    const offset = layer === 0 ? 0 : Math.PI / petals;
+    const scale = layer === 0 ? 1 : .74;
+
+    for (let i = 0; i < petals; i++) {
+      const angle = Math.PI * 2 * i / petals + offset;
+
+      ctx.save();
+      ctx.rotate(angle);
+      ctx.translate(0, -size * .48);
+
+      const gradient = ctx.createLinearGradient(
+        -size * .25, -size * .5,
+        size * .25, size * .55
+      );
+
+      gradient.addColorStop(0, "#FFF8ED");
+      gradient.addColorStop(.3, flower.color);
+      gradient.addColorStop(1, flower.color);
+
+      ctx.beginPath();
+      ctx.ellipse(
+        0, 0,
+        size * .26 * scale,
+        size * .58 * scale,
+        0, 0, Math.PI * 2
+      );
+
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,.26)";
+      ctx.lineWidth = .6;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  const centerGradient = ctx.createRadialGradient(
+    -size * .07, -size * .08, 0,
+    0, 0, size * .31
+  );
+
+  centerGradient.addColorStop(0, "#FBE3A0");
+  centerGradient.addColorStop(.55, flower.centerColor);
+  centerGradient.addColorStop(1, "#6C5631");
+
+  ctx.beginPath();
+  ctx.arc(0, 0, size * .27, 0, Math.PI * 2);
+  ctx.fillStyle = centerGradient;
+  ctx.fill();
+
+  for (let i = 0; i < 18; i++) {
+    const angle = Math.PI * 2 * i / 18;
+    const r = size * .19;
+
+    ctx.beginPath();
+    ctx.arc(
+      Math.cos(angle) * r,
+      Math.sin(angle) * r,
+      size * .018,
+      0, Math.PI * 2
+    );
+
+    ctx.fillStyle = "rgba(70,45,20,.38)";
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function plantTrail(from, to) {
+  const d = distance(from, to);
+  if (d < 2) return;
+
+  const count = Math.max(1, Math.ceil(d / FLOWER_SPACING));
+
+  for (let i = 1; i <= count; i++) {
+    const t = i / count;
+    plantFlower(
+      from.x + (to.x - from.x) * t,
+      from.y + (to.y - from.y) * t
+    );
+  }
+}
+
+function scatterFlowers(origin) {
+  flowers.forEach((flower) => {
+    if (flower.scattered) return;
+
+    flower.scattered = true;
+
+    let dx = flower.x - origin.x;
+    let dy = flower.y - origin.y;
+    let d = Math.hypot(dx, dy);
+
+    if (d < 10) {
+      const angle = Math.random() * Math.PI * 2;
+      dx = Math.cos(angle);
+      dy = Math.sin(angle);
+      d = 1;
+    }
+
+    const speed = 16 + Math.random() * 14;
+
+    flower.vx = dx / d * speed;
+    flower.vy = dy / d * speed;
+    flower.spin = (Math.random() - .5) * .22;
+  });
+}
+
+const CONNECTIONS = [
+  [0,1],[1,2],[2,3],[3,4],
+  [0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],
+  [9,13],[13,14],[14,15],[15,16],
+  [13,17],[17,18],[18,19],[19,20],
+  [0,17]
+];
+
+function drawHandMesh(landmarks) {
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,.95)";
+  ctx.lineWidth = 1.4;
+
+  for (const [a, b] of CONNECTIONS) {
+    ctx.beginPath();
+    ctx.moveTo(landmarks[a].x * width, landmarks[a].y * height);
+    ctx.lineTo(landmarks[b].x * width, landmarks[b].y * height);
+    ctx.stroke();
+  }
+
+  landmarks.forEach((point) => {
+    ctx.beginPath();
+    ctx.arc(point.x * width, point.y * height, 2, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+function animate() {
+  if (!running) return;
+
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+
+  ctx.clearRect(0, 0, width, height);
+
+  flowers.forEach((flower) => {
+    if (flower.scattered) {
+      flower.x += flower.vx;
+      flower.y += flower.vy;
+      flower.rotation += flower.spin;
+    }
+
+    drawFlower(flower);
+  });
+
+  flowers = flowers.filter((flower) => {
+    if (!flower.scattered) return true;
+
+    return flower.x > -120 && flower.x < width + 120 &&
+           flower.y > -120 && flower.y < height + 120;
+  });
+
+  handMeshes.forEach(drawHandMesh);
+
+  animationId = requestAnimationFrame(animate);
+}
+
+function onResults(results) {
+  const detectedHands = results.multiHandLandmarks || [];
+  const handedness = results.multiHandedness || [];
+
+  const activeHands = new Set();
+  handMeshes = [];
+
+  let pointingCount = 0;
+  let openCount = 0;
+  let peaceCount = 0;
+
+  detectedHands.forEach((lm, i) => {
+    const id = handedness[i]?.label || `hand-${i}`;
+    activeHands.add(id);
+
+    const gesture = detectGesture(lm);
+    const oldGesture = previousGestures[id];
+
+    const tip = lm[8];
+    const point = {
+      x: tip.x * canvas.clientWidth,
+      y: tip.y * canvas.clientHeight
+    };
+
+    if (gesture === "point") {
+      pointingCount++;
+
+      const previous = previousPoints[id];
+
+      if (previous && oldGesture === "point") {
+        const d = distance(previous, point);
+
+        if (d > 3) {
+          plantTrail(previous, point);
+        } else {
+          plantFlower(point.x, point.y);
+        }
+      } else {
+        plantFlower(point.x, point.y);
+      }
+    }
+
+    if (gesture === "open") {
+      openCount++;
+      handMeshes.push(lm);
+
+      if (oldGesture !== "open") {
+        const palm = lm[9];
+
+        scatterFlowers({
+          x: palm.x * canvas.clientWidth,
+          y: palm.y * canvas.clientHeight
+        });
+      }
+    }
+
+    if (gesture === "peace") peaceCount++;
+
+    previousPoints[id] = point;
+    previousGestures[id] = gesture;
+  });
+
+  Object.keys(previousPoints).forEach((id) => {
+    if (!activeHands.has(id)) {
+      delete previousPoints[id];
+      delete previousGestures[id];
+    }
+  });
+
+  if (openCount > 0) {
+    gestureStatus.textContent = "Open palm detected · Flowers scattering";
+  } else if (pointingCount > 0) {
+    gestureStatus.textContent = "Pointing detected · Flowers are blooming";
+  } else if (peaceCount > 0) {
+    gestureStatus.textContent = "Peace sign detected";
+  } else {
+    gestureStatus.textContent = "Point to draw · Open your palm to scatter";
+  }
+}
+
+async function startCamera() {
+  if (running || starting) return;
+
+  starting = true;
+  startBtn.disabled = true;
+
+  try {
+    gestureStatus.textContent = "Connecting to camera...";
+
+    hands = new Hands({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: .65,
+      minTrackingConfidence: .65
+    });
+
+    hands.onResults(onResults);
+
+    camera = new Camera(video, {
+      onFrame: async () => {
+        if (running && hands) {
+          await hands.send({ image: video });
+        }
+      },
+      width: 1280,
+      height: 720
+    });
+
+    running = true;
+    await camera.start();
+
+    resizeCanvas();
+
+    placeholder.classList.add("hidden");
+    connectionStatus.textContent = "Camera connected";
+    statusDot.classList.add("active");
+    liveLabel.textContent = "Live";
+
+    startBtn.textContent = "Camera on";
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+
+    gestureStatus.textContent = "Point to draw · Open your palm to scatter";
+    animationId = requestAnimationFrame(animate);
+
+  } catch (error) {
+    console.error(error);
+
+    running = false;
+
+    connectionStatus.textContent = "Camera error";
+    statusDot.classList.remove("active");
+    liveLabel.textContent = "Offline";
+
+    gestureStatus.textContent =
+      "Camera access failed. Allow permission and try again.";
+
+    if (camera) {
+      camera.stop();
+      camera = null;
+    }
+
+    startBtn.textContent = "Camera on";
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+
+  } finally {
+    starting = false;
+  }
+}
+
+async function stopCamera() {
+  running = false;
+
+  if (camera) {
+    camera.stop();
+    camera = null;
+  }
+
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+    animationId = null;
+  }
+
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach((track) => track.stop());
+    video.srcObject = null;
+  }
+
+  if (hands) {
+    await hands.close();
+    hands = null;
+  }
+
+  flowers = [];
+  previousPoints = {};
+  previousGestures = {};
+  handMeshes = [];
+
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+
+  placeholder.classList.remove("hidden");
+  connectionStatus.textContent = "Camera offline";
+  statusDot.classList.remove("active");
+  liveLabel.textContent = "Camera offline";
+  gestureStatus.textContent = "Start your camera to begin";
+
+  startBtn.textContent = "Camera on";
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+}
+
+function clearGarden() {
+  flowers = [];
+  previousPoints = {};
+  previousGestures = {};
+  gestureStatus.textContent = "Garden cleared · Ready to draw";
+}
+
+startBtn.addEventListener("click", startCamera);
+stopBtn.addEventListener("click", stopCamera);
+clearBtn.addEventListener("click", clearGarden);
+</script>
+</body>
+</html>
